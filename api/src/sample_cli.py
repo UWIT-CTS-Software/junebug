@@ -42,7 +42,7 @@ Chassis ID         : 00:10:7f:8d:91:ed
 Port type          : Mac address
 Port ID            : 00:10:7f:8d:91:ed
 Port description   : eth0
-System name        : ITC-0106-TP1
+System name        : ITC-0106-PROC1
 
 System Description :  Linux 3.10.33 #4 SMP PREEMPT Wed Mar 21 23:16:38 EDT 2018 armv7l
 
@@ -72,7 +72,7 @@ Chassis ID         : 00:10:7f:8d:91:ed
 Port type          : Mac address
 Port ID            : 00:10:7f:8d:91:ed
 Port description   : eth0
-System name        : ITC-0106-TP1
+System name        : ITC-0106-DISP1
 
 System Description :  Linux 3.10.33 #4 SMP PREEMPT Wed Mar 21 23:16:38 EDT 2018 armv7l
 
@@ -107,9 +107,9 @@ while (run):
     if command == "show lldp neighbors":
         print("""
 Local Interface    Parent Interface    Chassis Id          Port info          System Name
-ge-0/0/3.0         -                   12:34:56:78:9A:BC   151                ITC-0173-PROC1
-ge-0/0/4.0         -                   12:34:56:78:9A:BC   151                ITC-0173-TP1
-ge-0/0/6.0         -                   12:34:56:78:9A:BC   151                ITC-0173-DISP1
+ge-0/0/3.0         -                   12:34:56:78:9A:BC   151                ITC-0106-PROC1
+ge-0/0/4.0         -                   12:34:56:78:9A:BC   151                ITC-0106-TP1
+ge-0/0/6.0         -                   12:34:56:78:9A:BC   151                ITC-0106-DISP1
         """)
     elif command.startswith("show lldp neighbors interface"):
         comList = command.split(" ")
@@ -121,6 +121,7 @@ ge-0/0/6.0         -                   12:34:56:78:9A:BC   151                IT
         else:
             print("[-] A_ERR: Improper number of arguments.")
     elif command == "quit":
+        print("Goodbye.")
         run = False
     else:
         print("[-] Error: Unknown command.")
