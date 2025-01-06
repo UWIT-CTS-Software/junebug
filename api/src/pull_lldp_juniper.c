@@ -44,7 +44,7 @@ void write_string(char *string, FILE *process) {
         pclose(process);
         exit(1);
     }
-    // msleep(10);
+    msleep(20);
 }
 
 char *write_struct_to_csv(struct PortRecord src) {
@@ -67,10 +67,9 @@ void strslice(const char* src, char* dest, size_t start, size_t end) {
 }
 
 int main(void) {
-    char *io_file = "output.txt";
-    FILE *out = freopen(io_file, "r", stdout);
+    FILE *w_out = freopen("output.txt", "w", stdout);
     FILE *process = initProcess("python3 sample_cli.py");
-    if (!(process && out)) {
+    if (!(process && w_out)) {
         perror("[-] F_ERR: Error initializing.");
         return 1;
     }
@@ -79,6 +78,8 @@ int main(void) {
     write_string("show lldp neighbors\n", process);
 
     fflush(process);
+    // fclose(process);
+    fclose(w_out);
 
     struct PortRecord records[12];
     int records_len = 0;
@@ -92,9 +93,15 @@ int main(void) {
         return 1;
     }
 
+    FILE *r_out = fopen("output.txt", "r");
+    if (!r_out) {
+        perror("[-] F_ERR: Error initializing.");
+        return 1;
+    }
+
     char line[256];
     int pass;
-    while(fgets(line, sizeof(line), out) != NULL) {
+    while(fgets(line, sizeof(line), r_out) != NULL) {
         pass = regexec(&regex_rule, line, max_groups, matches, 0);
         if (!pass) {
             char *pack_struct[3];
@@ -120,40 +127,40 @@ int main(void) {
         }
     }
 
-    // fclose(r_out);
+    fclose(r_out);
     regfree(&regex_rule);
 
-    /* w_out = freopen("output.txt", "w", stdout);
-    if (w_out == NULL) {
+    w_out = freopen("output.txt", "w", stdout);
+    if (!w_out) {
         perror("[-] F_ERR: Error opening write-only file.");
     }
-    process = initProcess("python3 sample_cli.py");
+    /* process = initProcess("python3 sample_cli.py");
     if (w_out == NULL || process == NULL) {
         perror("[-] F_ERR: Error initializing.");
         return 1;
     } */
 
     char *com_base = "show lldp neighbors interface ";
+    int test = strlen(com_base);
+    char *command = malloc(strlen(com_base)+strlen(records[0].portid)+3);
     for (int i=0; i<records_len; i++) {
-        char *command = malloc(strlen(com_base)+strlen(records[i].portid)+2);
         strcpy(command, com_base);
         strcat(command, records[i].portid);
         strcat(command, "\n");
         write_string(command, process);
-        free(command);
     }
+    free(command);
     write_string("quit\n", process);
 
-    /* pclose(process);
+    fclose(w_out);
+    pclose(process);
     process = NULL;
-    fclose(w_out); */
 
-    fflush(process);
 
-    /* r_out = fopen("output.txt", "r");
+    r_out = fopen("output.txt", "r");
     if (r_out == NULL) {
         perror("[-] F_ERR: Error opening read-only file.");
-    } */
+    }
 
     char *hn_regex_string = "^System name.*: ([A-Za-z0-9-]*)";
     size_t hn_max_groups = 2;
@@ -176,7 +183,7 @@ int main(void) {
     char *last_hn;
     int hn_pass;
     int ip_pass;
-    while(fgets(line, sizeof(line), out) != NULL) {
+    while(fgets(line, sizeof(line), r_out) != NULL) {
         hn_pass = regexec(&hn_regex_rule, line, hn_max_groups, hn_matches, 0);
         ip_pass = regexec(&ip_regex_rule, line, ip_max_groups, ip_matches, 0);
         if (!hn_pass) {
@@ -188,13 +195,14 @@ int main(void) {
                 if (!result) {
                     records[i].ipaddr = malloc((ip_matches[1].rm_eo-ip_matches[1].rm_so)+1);
                     strslice(line, records[i].ipaddr, ip_matches[1].rm_so, ip_matches[1].rm_eo);
+                    break;
                 }
             }
             free(last_hn);
         }
     }
 
-    fclose(out);
+    fclose(r_out);
     regfree(&hn_regex_rule);
     regfree(&ip_regex_rule);
 

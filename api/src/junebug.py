@@ -39,7 +39,7 @@ def signal_handler(sig, frame):
     runnerThread.join()
     exit(0)
 
-os.system(f"gcc {filepath}pull_lldp.c -o {filepath}../bin/pull_lldp.out")
+os.system(f"gcc {filepath}pull_lldp_juniper.c -o {filepath}../bin/pull_lldp.out")
 
 signal.signal(signal.SIGINT, signal_handler)
 listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
