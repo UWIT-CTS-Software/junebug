@@ -1,1 +1,4 @@
-# Junebug - Automated Device Status Detection #
+# Junebug by UWIT - Automated Device Status Detection
+## Introducing Junebug ##
+&emsp;&emsp;Junebug has been created to round out the service capabilities of the UWIT CTS team. We currently have hardware installed in hundreds of rooms on campus. In order to maintain this equipment, technitians are assigned a portion of campus to preform routine preventative maintenance checks. This constant rotation of manual checks has allowed our team to find and remedy issues *before* a lecturer has to report it, but the time, staffing, and documentation requirements are a significant limitation on our capabilities.<br>
+&emsp;&emsp;Test

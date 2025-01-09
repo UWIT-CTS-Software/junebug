@@ -31,9 +31,12 @@ Command flow: Jupiter Switches
 Enter key
 Username, enter
 Password, enter
+cli
 show lldp neighbors
 for neighbor in neighbors:
   show lldp neighbors interface <neighbor-port-id>
+quit
+exit
 ```
 
 Command Flow: Netgear Switches
@@ -41,7 +44,9 @@ Command Flow: Netgear Switches
 Username, enter
 Password, enter
 enable
+Password, enter
 show lldp interface all
 for interface in interfaces:
   show lldp interface <interface unit/port id>
+quit
 ```

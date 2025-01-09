@@ -68,14 +68,14 @@ void strslice(const char* src, char* dest, size_t start, size_t end) {
 
 int main(void) {
     FILE *w_out = freopen("output.txt", "w", stdout);
-    FILE *process = initProcess("python3 sample_cli_juniper.py");
+    FILE *process = initProcess("python3 sample_cli_netgear.py");
     if (!(process && w_out)) {
         perror("[-] F_ERR: Error initializing.");
         return 1;
     }
 
-    write_string("y\n", process);
-    write_string("show lldp neighbors\n", process);
+    write_string("enable\n", process);
+    write_string("show lldp interface all\n", process);
 
     fflush(process);
     // fclose(process);
@@ -140,7 +140,7 @@ int main(void) {
         return 1;
     } */
 
-    char *com_base = "show lldp neighbors interface ";
+    char *com_base = "show lldp interface ";
     int test = strlen(com_base);
     char *command = malloc(strlen(com_base)+strlen(records[0].portid)+3);
     for (int i=0; i<records_len; i++) {

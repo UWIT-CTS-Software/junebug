@@ -20,7 +20,7 @@ def update_data():
     while active:
         os.system(f"{filepath}../bin/pull_lldp.out")
 
-        with open("records_out.csv", "r") as csvfile:
+        with open("api/records_out.csv", "r") as csvfile:
             linereader = csv.reader(csvfile)
             for row in linereader:
                 if row[1] in roomData.keys():
