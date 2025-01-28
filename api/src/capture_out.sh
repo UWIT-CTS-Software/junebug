@@ -1,1 +1,0 @@
-return `../bin/a.out`
