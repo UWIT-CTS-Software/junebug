@@ -4,9 +4,9 @@ Reference the lldp advertisements of network switches to search for anomalies in
 
 ## Program Flow ##
 Python:
-  - Initialize status table
+  - Initalize status table
   - Collect room configuration and switch type data
-  - Initialize TCP listener threads for calls
+  - Initializze TCP listener threads for calls
     - When a call is made, verify headers and then parse command
       - ...?rooms=["room1","room2","room3"]&max=<number>&offset=<number>
       - ...?lifetime={uptime:<floor_date>,sort:<newest|oldest>}&max=<number>&offset=<number>
