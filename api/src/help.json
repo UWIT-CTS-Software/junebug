@@ -1,0 +1,15 @@
+{
+    "help": {
+        "general": "Make an API call to Junebug with https://junebug.cts/api?argument=value&argument=value&parameter=value",
+        "arguments": [
+            "room=(string) will return the status of all devices in a room, provided it exists.",
+            "building=(string) will return the status of all of the devices in a building, provided it exists.",
+            "uptime=(integer) will return all devices with an uptime equal to or greater than the provided number.",
+            "priority=(low|medium|high) will return all devices with a priority status equal to the value provided."
+        ],
+        "parameters": [
+            "max=(integer) will limit the number of returned rooms.",
+            "offset=(integer) will shift the returned values by some number (the first room being indexed as offset=0)."
+        ]
+    }
+}

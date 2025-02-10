@@ -113,13 +113,10 @@ ge-0/0/6.0         -                   12:34:56:78:9A:BC   151                IT
         """)
     elif command.startswith("show lldp neighbors interface"):
         comList = command.split(" ")
-        if len(comList) == 5:
-            if comList[4] in interfaceDict.keys():
-                print(interfaceDict.get(comList[4]))
-            else:
-                print("[-] I_ERR: Interface unknown.")
+        if len(comList) == 5 and comList[4] in interfaceDict.keys():
+            print(interfaceDict.get(comList[4]))
         else:
-            print("[-] A_ERR: Improper number of arguments.")
+            print("[-] I_ERR: Interface unknown.")
     elif command == "quit":
         print("Goodbye.")
         run = False
