@@ -1,12 +1,15 @@
-import time
+import argparse
+import os
 import threading
 import inspect
 import ctypes
 import queue
-from http.server import HTTPServer, BaseHTTPRequestHandler
-import re
+import socket
+from https_socketserver import BaseServer
+from https_server import HTTPServer, SimpleHTTPRequestHandler
+import csv
 from io import BytesIO
-import ssl
+from OpenSSL import SSL
 
 def _async_raise(tid, exctype):
     if not inspect.isclass(exctype):
@@ -58,65 +61,129 @@ class Runner(KillableThread):
 
     def run(self):
         while self.running:
-            self.collector.put(self.counter)
+            if self.counter % 2:
+                switch_type = "netgear"
+            else:
+                switch_type = "juniper"
+            
+            os.system(f"{filepath}../bin/pull_lldp.out {switch_type} test")
+
+            with open('records_out.csv', 'r') as csvfile:
+                csv_reader = csv.reader(csvfile)
+                for row in csv_reader:
+                    self.collector.put((row[1], row[3]))
+
             self.counter += 1
-            time.sleep(1)
 
 class DataHandler(KillableThread):
-    def __init__(self, child, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         super(DataHandler, self).__init__(*args, *kwargs)
-        self.child = child
-        self.child_tid = self.child._get_tid()
-        self.counter = 0
-    
-    def run(self):
-        while True:
-            if not self.child.collector.empty():
-                self.counter = self.child.collector.get()
-        
-class ServerThread(KillableThread):
-    def __init__(self, datasrc, *args, **kwargs):
-        super(ServerThread, self).__init__(*args, **kwargs)
-        self.datasrc = datasrc
-        self.data = 0
-        self.filepath_base = __file__.removesuffix("test.py")
+        self.records = {}
 
     def get_data(self):
-        self.data = self.datasrc.counter
-        return self.data
+        return self.records
     
     def run(self):
+        while True:
+            if not runnerThread.collector.empty():
+                record = runnerThread.collector.get()
+                if record[0] in self.records.keys():
+                    uptime = self.records.get(record[0])[1]
+                    self.records.update({record[0]: (record[1], uptime+1)})
+                else:
+                    self.records.update({record[0]: (record[1], 1)})
+        
+class ServerThread(KillableThread):
+    def __init__(self, *args, **kwargs):
+        super(ServerThread, self).__init__(*args, **kwargs)
+    
+    def run(self):
+        parser = argparse.ArgumentParser()
+        parser.add_argument("port", type=int, nargs="?", const=1, default=8888)
+        args = parser.parse_args()
+        sport = args.port
         sip = '127.0.0.1'
-        sport = 7878
         while True:
             try:
-                httpd = HTTPServer((sip, sport), HTTPRequestHandler)
-                # sock_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-                # sock_context.load_cert_chain(certfile=f"{self.filepath_base}cert.pem", keyfile=f"{self.filepath_base}key.pem")
-                # httpd.socket = sock_context.wrap_socket(httpd.socket, server_side=True)
+                httpd = SecureHTTPServer((sip, sport), SecureHTTPRequestHandler)
                 break
             except Exception as e:
                 print(f"[!] Caught error: {e}")
                 sport += 1
                 pass
-        print(f"-- [+] Junebug mounted at {sip}:{sport} --")
+        address = httpd.socket.getsockname()
+        print(f"-- [+] Junebug mounted at {address[0]}:{address[1]} --")
         httpd.serve_forever()
 
-class HTTPRequestHandler(BaseHTTPRequestHandler):
+class SecureHTTPServer(HTTPServer):
+    def __init__(self, server_location, handler):
+        BaseServer.__init__(self, server_location, handler)
+        ctx = SSL.Context(SSL.TLS_SERVER_METHOD)
+        key_pem = f"{filepath}../keys/key.pem"
+        cert_pem = f"{filepath}../keys/cert.pem"
+        ctx.use_privatekey_file(key_pem)
+        ctx.use_certificate_file(cert_pem)
+        self.socket = SSL.Connection(ctx, socket.socket(self.address_family, self.socket_type))
+        self.server_bind()
+        self.server_activate()
+
+class SecureHTTPRequestHandler(SimpleHTTPRequestHandler):
+    def setup(self):
+        self.connection = self.request
+        self.rfile = socket.SocketIO(self.request, "rb")
+        self.wfile = socket.SocketIO(self.request, "wb")
+
+    def get_args(self, api_path):
+        argsDict = {}
+        try:
+            args = api_path.split("?")[1]
+        except Exception as e:
+            return {"error": "[+] U_ERR: No parameters provided."}
+        
+        try:
+            for arg in args.split("&"):
+                splitArg = arg.split("=")
+                argsDict.update({splitArg[0]: splitArg[1]})
+        except Exception as e:
+            return {"error": "[+] A_ERR: Parameter provided without argument."}
+
+        return argsDict
+                
+        
     def do_GET(self):
         path = self.path
-        resp = "[-] U_ERR: Unknown URL."
+        resp = "{ \"alert\": \"[-] U_ERR: Unknown URL called.\" }"
         self.send_response(200)
+        self.send_header("Content-Type", "application/json")
         self.end_headers()
+        kill = False
 
         if path == "/":
-            resp = "[+] HOME call made."
+            resp = open("help.json", "r").read()
         elif path.startswith("/api"):
-            resp = "[+] API call made."
-        elif path.startswith("/config"):
-            resp = "[+] CONFIG call made."
+            data = handlerThread.get_data()
+            argDict = self.get_args(path)
+            if "error" in argDict.keys():
+                resp = "{ \"error\": \"" + argDict["error"] + "\" }"
+            else:
+                resp = "{ \"rooms\": ["
+                for key in data.keys():
+                    room = data.get(key)
+                    resp += " {\"name\": \"" + key + "\", \"ip\": \"" + room[0] + "\", \"uptime\": " + str(room[1]) + "}, "
+                resp = resp[:-2]
+                resp += "] }"
+        elif path.startswith("/help"):
+            resp = open("help.json", "r").read()
+        elif path.startswith("/kill"):
+            resp = "{ \"alert\": \"[+] KILL call made... Shutting down server.\" }"
+            kill = True
 
         self.wfile.write(bytes(resp, "ascii"))
+        if kill:
+            runnerThread.raise_exc(SystemExit)
+            handlerThread.raise_exc(SystemExit)
+            reqThread.raise_exc(SystemExit)
+        
 
     def do_POST(self):
         path = self.path
@@ -128,10 +195,12 @@ class HTTPRequestHandler(BaseHTTPRequestHandler):
         resp.write(bytes(path, "ascii"))
         resp.write(b'\n')
         self.wfile.write(resp.getvalue())
-
+        
+filepath = __file__.removesuffix("junebug.py")
+os.system(f"gcc {filepath}pull_lldp.c -o {filepath}../bin/pull_lldp.out")
 runnerThread = Runner()
 runnerThread.start()
-handlerThread = DataHandler(runnerThread)
+handlerThread = DataHandler()
 handlerThread.start()
-reqThread = ServerThread(handlerThread)
+reqThread = ServerThread()
 reqThread.start()

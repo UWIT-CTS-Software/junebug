@@ -23,8 +23,8 @@ FILE *pinit(char *command) {
     return process;
 }
 
-FILE *open(const char *file, const char *mode) {
-    FILE *file = fopen(file, mode);
+FILE *open(const char *filename, const char *mode) {
+    FILE *file = fopen(filename, mode);
     if (!file) {
         perror("[-] F_ERR: Error opening file.");
         exit(1);
@@ -33,8 +33,8 @@ FILE *open(const char *file, const char *mode) {
     return file;
 }
 
-FILE *reopen(const char *file, const char *mode) {
-    FILE *file = freopen(file, mode, stdout);
+FILE *reopen(const char *filename, const char *mode) {
+    FILE *file = freopen(filename, mode, stdout);
     if (!file) {
         perror("R_ERR: freopen failed.");
     }
@@ -63,7 +63,7 @@ void wstring(char *string, FILE *process) {
         pclose(process);
         exit(1);
     }
-    msleep(20);
+    msleep(150);
 }
 
 char *prtocsv(struct PortRecord src) {
@@ -142,17 +142,17 @@ int jexec(const char* hostname) {
     w_out = reopen("output.txt", "w");
 
     char *com_base = "show lldp neighbors interface ";
-    int test = strlen(com_base);
-    char *command = malloc(strlen(com_base)+strlen(records[0].portid)+3);
+    char command[128];
     for (int i=0; i<records_len; i++) {
         strcpy(command, com_base);
         strcat(command, records[i].portid);
         strcat(command, "\n");
         wstring(command, process);
     }
-    free(command);
     wstring("quit\n", process);
 
+
+    fflush(process);
     fclose(w_out);
     pclose(process);
     process = NULL;
@@ -224,8 +224,8 @@ int nexec(const char* hostname) {
     FILE *w_out = reopen("output.txt", "w");
     FILE *process = pinit("python3 sample_cli_netgear.py");
 
-    write_string("enable\n", process);
-    write_string("show lldp interface all\n", process);
+    wstring("enable\n", process);
+    wstring("show lldp interface all\n", process);
 
     fflush(process);
     fclose(w_out);
@@ -278,17 +278,17 @@ int nexec(const char* hostname) {
     w_out = reopen("output.txt", "w");
 
     char *com_base = "show lldp interface ";
-    int test = strlen(com_base);
-    char *command = malloc(strlen(com_base)+strlen(records[0].portid)+3);
+    char command[128];
     for (int i=0; i<records_len; i++) {
         strcpy(command, com_base);
         strcat(command, records[i].portid);
         strcat(command, "\n");
-        write_string(command, process);
+        wstring(command, process);
     }
-    free(command);
-    write_string("quit\n", process);
+    // free(command);
+    wstring("quit\n", process);
 
+    fflush(process);
     fclose(w_out);
     pclose(process);
     process = NULL;
@@ -357,15 +357,16 @@ int nexec(const char* hostname) {
 }
 
 int main(int argc, char *argv[]) {
-    if (argc != 2) {
+    if (argc != 3) {
         perror("[-] ARG_ERR: Insufficient number of arguments passed.");
+        printf("    Arguments recieved: %d\n", argc);
         exit(1);
     }
 
-    if (argv[0] == "juniper") {
-        jexec(argv[1]);
-    } else if (argv[0] == "netgear") {
-        nexec(argv[1]);
+    if (!strcmp(argv[1],"juniper")) {
+        jexec(argv[2]);
+    } else if (!strcmp(argv[1],"netgear")) {
+        nexec(argv[2]);
     } else {
         perror("[-] DEV_ERR: Incorrect device type passed as the first argument.");
         exit(1);
