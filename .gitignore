@@ -1,2 +1,4 @@
 api/keys
 api/src/pull_lldp
+test*
+a.out

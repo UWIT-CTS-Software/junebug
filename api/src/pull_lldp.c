@@ -58,12 +58,13 @@ int msleep(long msec) {
 }
 
 void wstring(char *string, FILE *process) {
-    if (fputs(string, process) == EOF) {
+    size_t written = fwrite(string, sizeof(char), strlen(string), process);
+    if (written != strlen(string)) {
         perror("[-] W_ERR: Failed to write.");
         pclose(process);
         exit(1);
     }
-    msleep(150);
+    msleep(100);
 }
 
 char *prtocsv(struct PortRecord src) {
@@ -86,14 +87,16 @@ void strslice(const char* src, char* dest, size_t start, size_t end) {
 }
 
 int jexec(const char* hostname) {
-    FILE *w_out = reopen("output.txt", "w");
+    FILE *out = reopen("output.txt", "w+");
     FILE *process = pinit("python3 sample_cli_juniper.py");
 
     wstring("y\n", process);
     wstring("show lldp neighbors\n", process);
 
     fflush(process);
-    fclose(w_out);
+    msleep(200);
+    fflush(out);
+    rewind(out);
 
     struct PortRecord records[12];
     int records_len = 0;
@@ -107,11 +110,9 @@ int jexec(const char* hostname) {
         exit(1);
     }
 
-    FILE *r_out = open("output.txt", "r");
-
     char line[256];
     int pass;
-    while(fgets(line, sizeof(line), r_out) != NULL) {
+    while(fgets(line, sizeof(line), out) != NULL) {
         pass = regexec(&regex_rule, line, max_groups, matches, 0);
         if (!pass) {
             char *pack_struct[3];
@@ -136,10 +137,7 @@ int jexec(const char* hostname) {
         }
     }
 
-    fclose(r_out);
     regfree(&regex_rule);
-
-    w_out = reopen("output.txt", "w");
 
     char *com_base = "show lldp neighbors interface ";
     char command[128];
@@ -153,11 +151,9 @@ int jexec(const char* hostname) {
 
 
     fflush(process);
-    fclose(w_out);
-    pclose(process);
-    process = NULL;
-
-    r_out = open("output.txt", "r");
+    msleep(200);
+    fflush(out);
+    rewind(out);
 
     char *hn_regex_string = "^System name.*: ([A-Za-z0-9-]*)";
     size_t hn_max_groups = 2;
@@ -180,7 +176,7 @@ int jexec(const char* hostname) {
     char *last_hn;
     int hn_pass;
     int ip_pass;
-    while(fgets(line, sizeof(line), r_out) != NULL) {
+    while(fgets(line, sizeof(line), out) != NULL) {
         hn_pass = regexec(&hn_regex_rule, line, hn_max_groups, hn_matches, 0);
         ip_pass = regexec(&ip_regex_rule, line, ip_max_groups, ip_matches, 0);
         if (!hn_pass) {
@@ -199,7 +195,6 @@ int jexec(const char* hostname) {
         }
     }
 
-    fclose(r_out);
     regfree(&hn_regex_rule);
     regfree(&ip_regex_rule);
 
@@ -216,19 +211,24 @@ int jexec(const char* hostname) {
         free(csv_line);
     }
     fclose(csv);
+    fclose(out);
+    pclose(process);
+    process = NULL;
 
     return 0;
 }
 
 int nexec(const char* hostname) {
-    FILE *w_out = reopen("output.txt", "w");
+    FILE *out = reopen("output.txt", "w+");
     FILE *process = pinit("python3 sample_cli_netgear.py");
 
     wstring("enable\n", process);
     wstring("show lldp interface all\n", process);
 
     fflush(process);
-    fclose(w_out);
+    msleep(200);
+    fflush(out);
+    rewind(out);
 
     struct PortRecord records[12];
     int records_len = 0;
@@ -242,11 +242,9 @@ int nexec(const char* hostname) {
         return 1;
     }
 
-    FILE *r_out = open("output.txt", "r");
-
     char line[256];
     int pass;
-    while(fgets(line, sizeof(line), r_out) != NULL) {
+    while(fgets(line, sizeof(line), out) != NULL) {
         pass = regexec(&regex_rule, line, max_groups, matches, 0);
         if (!pass) {
             char *pack_struct[3];
@@ -272,10 +270,7 @@ int nexec(const char* hostname) {
         }
     }
 
-    fclose(r_out);
     regfree(&regex_rule);
-
-    w_out = reopen("output.txt", "w");
 
     char *com_base = "show lldp interface ";
     char command[128];
@@ -289,11 +284,9 @@ int nexec(const char* hostname) {
     wstring("quit\n", process);
 
     fflush(process);
-    fclose(w_out);
-    pclose(process);
-    process = NULL;
-
-    r_out = open("output.txt", "r");
+    msleep(200);
+    fflush(out);
+    rewind(out);
 
     char *hn_regex_string = "^System name.*: ([A-Za-z0-9-]*)";
     size_t hn_max_groups = 2;
@@ -316,7 +309,7 @@ int nexec(const char* hostname) {
     char *last_hn;
     int hn_pass;
     int ip_pass;
-    while(fgets(line, sizeof(line), r_out) != NULL) {
+    while(fgets(line, sizeof(line), out) != NULL) {
         hn_pass = regexec(&hn_regex_rule, line, hn_max_groups, hn_matches, 0);
         ip_pass = regexec(&ip_regex_rule, line, ip_max_groups, ip_matches, 0);
         if (!hn_pass) {
@@ -335,7 +328,6 @@ int nexec(const char* hostname) {
         }
     }
 
-    fclose(r_out);
     regfree(&hn_regex_rule);
     regfree(&ip_regex_rule);
 
@@ -352,6 +344,9 @@ int nexec(const char* hostname) {
         free(csv_line);
     }
     fclose(csv);
+    fclose(out);
+    pclose(process);
+    process = NULL;
 
     return 0;
 }
