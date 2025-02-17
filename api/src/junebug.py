@@ -10,6 +10,7 @@ from https_server import HTTPServer, SimpleHTTPRequestHandler
 import csv
 from io import BytesIO
 from OpenSSL import SSL
+import json
 
 def _async_raise(tid, exctype):
     if not inspect.isclass(exctype):
@@ -132,6 +133,19 @@ class SecureHTTPRequestHandler(SimpleHTTPRequestHandler):
         self.connection = self.request
         self.rfile = socket.SocketIO(self.request, "rb")
         self.wfile = socket.SocketIO(self.request, "wb")
+        self.data = 0
+        with open("../keys/keys.json", "r") as keys:
+            self.data = json.load(keys)
+        self.respHeaders = [("Content-Type", "application/json")]
+            
+    def send_resp(self, code, headerList, bodyList):
+        self.send_response(code)
+        for headerTuple in headerList:
+            self.send_header(headerTuple[0], headerTuple[1])
+        self.end_headers()
+        resp = BytesIO()
+        resp.writelines(bodyList)
+        self.wfile.write(resp.getvalue())
 
     def get_args(self, api_path):
         argsDict = {}
@@ -152,49 +166,57 @@ class SecureHTTPRequestHandler(SimpleHTTPRequestHandler):
         
     def do_GET(self):
         path = self.path
-        resp = "{ \"alert\": \"[-] U_ERR: Unknown URL called.\" }"
-        self.send_response(200)
-        self.send_header("Content-Type", "application/json")
-        self.end_headers()
+        respCode = 200
+        respList = []
         kill = False
 
-        if path == "/":
-            resp = open("help.json", "r").read()
+        if (path == "/") or (path.startswith("/help")):
+            respList.append(open("help.json", "rb").read())
         elif path.startswith("/api"):
             data = handlerThread.get_data()
             argDict = self.get_args(path)
             if "error" in argDict.keys():
                 resp = "{ \"error\": \"" + argDict["error"] + "\" }"
+                respList.append(bytes(resp, "ascii"))
             else:
-                resp = "{ \"rooms\": ["
+                respList.append(b"{ \"rooms\": [ ")
                 for key in data.keys():
                     room = data.get(key)
-                    resp += " {\"name\": \"" + key + "\", \"ip\": \"" + room[0] + "\", \"uptime\": " + str(room[1]) + "}, "
-                resp = resp[:-2]
-                resp += "] }"
-        elif path.startswith("/help"):
-            resp = open("help.json", "r").read()
+                    resp = "{\"name\": \"" + key + "\", \"ip\": \"" + room[0] + "\", \"uptime\": " + str(room[1]) + "}, "
+                    respList.append(bytes(resp, "ascii"))
+                respList[-1] = respList[-1][:-2]
+                respList.append(b" ] }")
         elif path.startswith("/kill"):
-            resp = "{ \"alert\": \"[+] KILL call made... Shutting down server.\" }"
+            respList.append(b"{ \"alert\": \"[+] KILL call made... Shutting down server.\" }")
             kill = True
+        else:
+            respCode = 404
+            respList.append(b"{ \"alert\": \"[-] U_ERR: Unknown URL called.\" }")
 
-        self.wfile.write(bytes(resp, "ascii"))
+        self.send_resp(respCode, self.respHeaders, respList)
+
         if kill:
             runnerThread.raise_exc(SystemExit)
             handlerThread.raise_exc(SystemExit)
             reqThread.raise_exc(SystemExit)
         
-
     def do_POST(self):
-        path = self.path
-        self.send_response(200)
-        self.end_headers()
-        resp = BytesIO()
-        resp.write(b"Got a POST request.\n")
-        resp.write(b"Got: ")
-        resp.write(bytes(path, "ascii"))
-        resp.write(b'\n')
-        self.wfile.write(resp.getvalue())
+        if "Authorization" in self.headers.keys():
+            if self.headers["Authorization"] == self.data["post_api"]:
+                auth = self.headers["Authorization"]
+                self.send_resp(200, self.respHeaders, [
+                    b"{ \"Authorization\": \"",
+                    bytes(auth, "ascii"),
+                    b"\" }"
+                ])
+            else:
+                self.send_resp(403, self.respHeaders, [
+                    b"{ \"error\": \"403 - Forbidden.\" }"
+                ])
+        else:
+            self.send_resp(401, self.respHeaders, [
+                b"{ \"error\": \"401 - Unauthorized.\" }"
+            ])
         
 filepath = __file__.removesuffix("junebug.py")
 os.system(f"gcc {filepath}pull_lldp.c -o {filepath}../bin/pull_lldp.out")

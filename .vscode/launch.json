@@ -16,7 +16,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${fileDirname}/${fileBasenameNoExtension}",
-            "args": ["juniper", "test"],
+            "args": ["netgear", "test"],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
             "environment": [],
