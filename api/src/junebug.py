@@ -162,6 +162,15 @@ class SecureHTTPRequestHandler(SimpleHTTPRequestHandler):
             return {"error": "[+] A_ERR: Parameter provided without argument."}
 
         return argsDict
+
+    def parse_POST(self):
+        print(self.headers.keys())
+        postvars = {}
+        if (("Content-Type" in self.headers.keys()) and ("Content-Length" in self.headers.keys())):
+            if self.headers["Content-Type"] == "application/x-www-form-urlencoded":
+                postvars = json.loads(self.rfile.read(int(self.headers["Content-Length"])).decode("ascii"))
+        
+        return postvars
                 
         
     def do_GET(self):
@@ -184,7 +193,8 @@ class SecureHTTPRequestHandler(SimpleHTTPRequestHandler):
                     room = data.get(key)
                     resp = "{\"name\": \"" + key + "\", \"ip\": \"" + room[0] + "\", \"uptime\": " + str(room[1]) + "}, "
                     respList.append(bytes(resp, "ascii"))
-                respList[-1] = respList[-1][:-2]
+                if len(data.keys()) > 0:
+                    respList[-1] = respList[-1][:-2]
                 respList.append(b" ] }")
         elif path.startswith("/kill"):
             respList.append(b"{ \"alert\": \"[+] KILL call made... Shutting down server.\" }")
@@ -207,6 +217,8 @@ class SecureHTTPRequestHandler(SimpleHTTPRequestHandler):
                 self.send_resp(200, self.respHeaders, [
                     b"{ \"Authorization\": \"",
                     bytes(auth, "ascii"),
+                    b"\", \"Body\": \"",
+                    bytes(str(self.parse_POST()), "ascii"),
                     b"\" }"
                 ])
             else:
