@@ -8,9 +8,12 @@ Python:
   - Collect room configuration and switch type data
   - Initialize TCP listener threads for calls
     - When a call is made, verify headers and then parse command
-      - ...?rooms=["room1","room2","room3"]&max=<number>&offset=<number>
-      - ...?lifetime={uptime:<floor_date>,sort:<newest|oldest>}&max=<number>&offset=<number>
-      - ...?alerts={minPriority:<low|medium|high>}&max=<number>&offset=<number>
+      - ...?p={__arg1__:__value__,__arg2__:__value__...}&max=__number__&offset=__number__
+        - Arguments:
+          - rooms:[__room1__,__room2__, ...]
+          - building:__building abbreviation__
+          - uptime:__number__
+          - alert:__low__|__medium__|__high__
     - return data as JSON
   - Initialize collector threads
     - Constantly running on a loop
