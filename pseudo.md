@@ -19,7 +19,7 @@ Python:
     - Constantly running on a loop
     - Hostname configs and switch type passed as arguments
     - Pull lldp, send to python
-    - Python parses and valuates returning info
+    - Python parses and evaluates returning info
     - Store status data
 
 C:
