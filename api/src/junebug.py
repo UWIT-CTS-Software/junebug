@@ -1,5 +1,5 @@
 import argparse
-import os
+import os, sys
 import threading
 import inspect
 import ctypes
@@ -74,7 +74,7 @@ class Runner(KillableThread):
                 for row in csv_reader:
                     self.collector.put((row[1], row[3]))
 
-            self.counter += 1
+            self.counter = (self.counter + 1) % 100
 
 class DataHandler(KillableThread):
     def __init__(self, *args, **kwargs):
